@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Staff Passbook</title>
+  <title>Staff Attendance</title>
   
-  <!-- Web App Capabilities (PWA Ready) -->
   <meta name="theme-color" content="#1B55C0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
-  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <style>
@@ -29,7 +27,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg); color: var(--text-main); padding-bottom: 30px; }
 
-    /* Header Bar */
     .header {
       background: var(--primary);
       color: white;
@@ -42,7 +39,6 @@
 
     .container { max-width: 500px; margin: 0 auto; padding: 12px; }
 
-    /* Worker Profile Card */
     .profile-card {
       background: var(--card-bg);
       border-radius: 14px;
@@ -54,7 +50,6 @@
     .profile-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
     .profile-rate { font-size: 13px; font-weight: 600; color: #374151; margin-top: 6px; }
 
-    /* Month Switcher Controls */
     .month-nav {
       display: flex;
       justify-content: space-between;
@@ -77,7 +72,6 @@
     }
     .month-title { font-size: 15px; font-weight: 700; }
 
-    /* Summary Stats Grid */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -94,7 +88,6 @@
     .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .stat-val { font-size: 18px; font-weight: 700; margin-top: 4px; }
 
-    /* Daily List Table */
     .daily-card {
       background: var(--card-bg);
       border-radius: 14px;
@@ -132,19 +125,30 @@
     .adv-text { font-size: 14px; font-weight: 700; color: var(--red); }
     .adv-note { font-size: 11px; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* Loading Spinner */
     .loading-box { text-align: center; padding: 40px 16px; color: var(--text-muted); font-weight: 600; }
+    .alert-box {
+      margin: 20px auto;
+      max-width: 460px;
+      background: #FEE2E2;
+      color: #991B1B;
+      border: 1px solid #F87171;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
     <h1>LaborRegister</h1>
-    <p>Staff Attendance & Payment Passbook</p>
+    <p>Staff Attendance & Khata Record</p>
   </div>
 
   <div class="container">
     <div id="loading" class="loading-box">Record khoja jaa raha hai...</div>
+    <div id="errorBox" class="alert-box" style="display: none;"></div>
 
     <div id="content" style="display: none;">
       <!-- Worker Details -->
@@ -191,12 +195,9 @@
   </div>
 
   <script>
-    // 1. Supabase Initialization
     const SUPABASE_URL = "https://mwpannzrpftuampoieak.supabase.co";
     const SUPABASE_ANON = "sb_publishable_Obg1n-jKMS2HSL1da9Ldpw_woy3Ga5C";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    // Current State
     let currentDate = new Date();
     let passbookData = null;
 
@@ -204,40 +205,75 @@
                         "July", "August", "September", "October", "November", "December"];
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    // 2. Fetch Passbook by Token URL Param
-    async function loadPassbook() {
+    function showError(msg) {
+      document.getElementById('loading').style.display = 'none';
+      const errEl = document.getElementById('errorBox');
+      errEl.innerHTML = msg;
+      errEl.style.display = 'block';
+    }
+
+    async function fetchViaRest(token) {
+      const endpoint = `${SUPABASE_URL}/rest/v1/worker_passbooks?token=eq.${encodeURIComponent(token)}&select=*`;
+      const res = await fetch(endpoint, {
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+      const rows = await res.json();
+      return (rows && rows.length > 0) ? rows[0] : null;
+    }
+
+    async function loadAttendanceData() {
+      const loadingEl = document.getElementById('loading');
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
 
       if (!token) {
-        document.getElementById('loading').innerHTML = "⚠️ Kripya valid Passbook Link use karein.";
+        showError("⚠️ URL me token nahi mila! Kripya pura link copy karke kholein.");
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('worker_passbooks')
-          .select('*')
-          .eq('token', token)
-          .single();
+        let record = null;
 
-        if (error || !data) {
-          document.getElementById('loading').innerHTML = "❌ Record nahi mila. Kripya app se naya link banayein.";
+        // Try Supabase JS Client first if loaded, else fallback to direct REST
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+          const { data, error } = await client
+            .from('worker_passbooks')
+            .select('*')
+            .eq('token', token)
+            .maybeSingle();
+
+          if (error) {
+            record = await fetchViaRest(token);
+          } else {
+            record = data;
+          }
+        } else {
+          record = await fetchViaRest(token);
+        }
+
+        if (!record) {
+          showError("❌ Is worker ka koi record cloud par nahi mila.<br><br><b>Karan:</b> App me 'Live Passbook' button par tap karein taaki data internet par sync ho sake, fir is page ko refresh karein.");
           return;
         }
 
-        passbookData = data;
-        document.getElementById('loading').style.display = 'none';
+        passbookData = record;
+        loadingEl.style.display = 'none';
         document.getElementById('content').style.display = 'block';
 
         renderProfile();
         renderMonth();
       } catch (err) {
-        document.getElementById('loading').innerHTML = "Server se connect nahi ho paya. Refresh karein.";
+        showError(`⚠️ Connection Error: ${err.message || err}<br><br>Kripya internet check karein ya refresh karein.`);
       }
     }
 
-    // 3. Render Profile
     function renderProfile() {
       document.getElementById('workerName').innerText = passbookData.worker_name;
       document.getElementById('workerRole').innerText = passbookData.designation ? passbookData.designation : 'Staff / Labor';
@@ -245,16 +281,14 @@
       document.getElementById('salaryRate').innerText = `Salary: ${cur} ${passbookData.salary_rate} / ${passbookData.salary_type}`;
     }
 
-    // 4. Change Month (PREV / NEXT)
     function changeMonth(delta) {
       currentDate.setMonth(currentDate.getMonth() + delta);
       renderMonth();
     }
 
-    // 5. Render Selected Month (Attendance + Advances + Totals)
     function renderMonth() {
       const year = currentDate.getFullYear();
-      const month = currentDate.getMonth(); // 0-11
+      const month = currentDate.getMonth();
       const cur = passbookData.currency_symbol || '₹';
 
       document.getElementById('monthDisplay').innerText = `${monthNames[month]} ${year}`;
@@ -281,7 +315,6 @@
         const att = attMap[dateKey];
         const adv = advMap[dateKey];
 
-        // Stats Calculation
         let statusBadge = '<span class="status-badge badge-empty">-</span>';
         if (att && att.status) {
           const s = att.status;
@@ -305,14 +338,12 @@
           }
         }
 
-        // OT Badge
         let otBadge = '';
         if (att && att.ot_hours > 0) {
           countOtHours += att.ot_hours;
           otBadge = `<span class="status-badge badge-ot">${att.ot_hours}h OT</span>`;
         }
 
-        // Advance Money
         let moneyHtml = '<span style="color: #D1D5DB;">-</span>';
         if (adv && adv.amount > 0) {
           countAdvance += adv.amount;
@@ -342,13 +373,11 @@
 
       document.getElementById('dailyList').innerHTML = html;
 
-      // Update Summary Cards
       document.getElementById('statPresent').innerText = countPresent;
       document.getElementById('statAbsent').innerText = countAbsent;
       document.getElementById('statOt').innerText = `${countOtHours}h`;
       document.getElementById('statAdvance').innerText = `${cur} ${countAdvance}`;
 
-      // Net balance math
       let baseEarn = 0;
       if ((passbookData.salary_type || '').toLowerCase() === 'monthly') {
         const perDay = passbookData.salary_rate / totalDays;
@@ -362,7 +391,7 @@
       document.getElementById('statBalance').style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
     }
 
-    loadPassbook();
+    loadAttendanceData();
   </script>
 </body>
 </html>
