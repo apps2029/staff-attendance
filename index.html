@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Staff Passbook</title>
+  
+  <!-- Web App Capabilities (PWA Ready) -->
+  <meta name="theme-color" content="#1B55C0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    :root {
+      --primary: #1B55C0;
+      --bg: #F4F6F9;
+      --card-bg: #FFFFFF;
+      --text-main: #1F2937;
+      --text-muted: #6B7280;
+      --green: #10B981;
+      --red: #EF4444;
+      --purple: #8B5CF6;
+      --border: #E5E7EB;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); padding-bottom: 30px; }
+
+    /* Header Bar */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header p { font-size: 12px; opacity: 0.9; margin-top: 3px; }
+
+    .container { max-width: 500px; margin: 0 auto; padding: 12px; }
+
+    /* Worker Profile Card */
+    .profile-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .profile-name { font-size: 19px; font-weight: 700; color: var(--primary); }
+    .profile-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .profile-rate { font-size: 13px; font-weight: 600; color: #374151; margin-top: 6px; }
+
+    /* Month Switcher Controls */
+    .month-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .month-btn {
+      background: #EEF2F6;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .month-title { font-size: 15px; font-weight: 700; }
+
+    /* Summary Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+    }
+    .stat-card.full-width { grid-column: span 2; }
+    .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .stat-val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+
+    /* Daily List Table */
+    .daily-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .daily-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+    .daily-item:last-child { border-bottom: none; }
+    
+    .date-box { width: 55px; }
+    .date-num { font-size: 15px; font-weight: 700; }
+    .date-day { font-size: 11px; color: var(--text-muted); }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 12px;
+      text-align: center;
+      min-width: 44px;
+    }
+    .badge-p { background: #DCFCE7; color: #166534; }
+    .badge-a { background: #FEE2E2; color: #991B1B; }
+    .badge-ot { background: #EDE9FE; color: #5B21B6; font-size: 11px; margin-left: 4px; }
+    .badge-empty { background: #F3F4F6; color: #9CA3AF; }
+
+    .money-box { text-align: right; }
+    .adv-text { font-size: 14px; font-weight: 700; color: var(--red); }
+    .adv-note { font-size: 11px; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Loading Spinner */
+    .loading-box { text-align: center; padding: 40px 16px; color: var(--text-muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>LaborRegister</h1>
+    <p>Staff Attendance & Payment Passbook</p>
+  </div>
+
+  <div class="container">
+    <div id="loading" class="loading-box">Record khoja jaa raha hai...</div>
+
+    <div id="content" style="display: none;">
+      <!-- Worker Details -->
+      <div class="profile-card">
+        <div class="profile-name" id="workerName">-</div>
+        <div class="profile-sub" id="workerRole">-</div>
+        <div class="profile-rate" id="salaryRate">-</div>
+      </div>
+
+      <!-- Month Navigation Controls -->
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeMonth(-1)">◀ PREV</button>
+        <div class="month-title" id="monthDisplay">-</div>
+        <button class="month-btn" onclick="changeMonth(1)">NEXT ▶</button>
+      </div>
+
+      <!-- Overview Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Present</div>
+          <div class="stat-val" id="statPresent" style="color: var(--green);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Absent</div>
+          <div class="stat-val" id="statAbsent" style="color: var(--red);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Overtime Hours</div>
+          <div class="stat-val" id="statOt" style="color: var(--purple);">0h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Advance</div>
+          <div class="stat-val" id="statAdvance" style="color: var(--red);">₹ 0</div>
+        </div>
+        <div class="stat-card full-width">
+          <div class="stat-label">Net Balance (Estimated)</div>
+          <div class="stat-val" id="statBalance" style="color: var(--primary);">₹ 0</div>
+        </div>
+      </div>
+
+      <!-- Daily Attendance List -->
+      <div class="daily-card" id="dailyList"></div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Supabase Initialization
+    const SUPABASE_URL = "https://mwpannzrpftuampoieak.supabase.co";
+    const SUPABASE_ANON = "sb_publishable_Obg1n-jKMS2HSL1da9Ldpw_woy3Ga5C";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // Current State
+    let currentDate = new Date();
+    let passbookData = null;
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // 2. Fetch Passbook by Token URL Param
+    async function loadPassbook() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+
+      if (!token) {
+        document.getElementById('loading').innerHTML = "⚠️ Kripya valid Passbook Link use karein.";
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('worker_passbooks')
+          .select('*')
+          .eq('token', token)
+          .single();
+
+        if (error || !data) {
+          document.getElementById('loading').innerHTML = "❌ Record nahi mila. Kripya app se naya link banayein.";
+          return;
+        }
+
+        passbookData = data;
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        renderProfile();
+        renderMonth();
+      } catch (err) {
+        document.getElementById('loading').innerHTML = "Server se connect nahi ho paya. Refresh karein.";
+      }
+    }
+
+    // 3. Render Profile
+    function renderProfile() {
+      document.getElementById('workerName').innerText = passbookData.worker_name;
+      document.getElementById('workerRole').innerText = passbookData.designation ? passbookData.designation : 'Staff / Labor';
+      const cur = passbookData.currency_symbol || '₹';
+      document.getElementById('salaryRate').innerText = `Salary: ${cur} ${passbookData.salary_rate} / ${passbookData.salary_type}`;
+    }
+
+    // 4. Change Month (PREV / NEXT)
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderMonth();
+    }
+
+    // 5. Render Selected Month (Attendance + Advances + Totals)
+    function renderMonth() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth(); // 0-11
+      const cur = passbookData.currency_symbol || '₹';
+
+      document.getElementById('monthDisplay').innerText = `${monthNames[month]} ${year}`;
+
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const attMap = passbookData.attendance_data || {};
+      const advMap = passbookData.advances_data || {};
+
+      let countPresent = 0;
+      let countAbsent = 0;
+      let countOtHours = 0;
+      let countAdvance = 0;
+
+      let html = '';
+
+      for (let day = 1; day <= totalDays; day++) {
+        const dateObj = new Date(year, month, day);
+        const dayName = dayNames[dateObj.getDay()];
+        
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${mStr}-${dStr}`;
+
+        const att = attMap[dateKey];
+        const adv = advMap[dateKey];
+
+        // Stats Calculation
+        let statusBadge = '<span class="status-badge badge-empty">-</span>';
+        if (att && att.status) {
+          const s = att.status;
+          if (s === 'P' || s === 'PA' || s === 'PH') {
+            countPresent += 1;
+            statusBadge = `<span class="status-badge badge-p">${s}</span>`;
+          } else if (s === '1/2' || s === '½') {
+            countPresent += 0.5;
+            statusBadge = `<span class="status-badge badge-p">½</span>`;
+          } else if (s === 'P+1/2' || s === 'P + ½') {
+            countPresent += 1.5;
+            statusBadge = `<span class="status-badge badge-p">1.5</span>`;
+          } else if (s === 'P+P' || s === 'P + P') {
+            countPresent += 2;
+            statusBadge = `<span class="status-badge badge-p">2.0</span>`;
+          } else if (s === 'A') {
+            countAbsent += 1;
+            statusBadge = `<span class="status-badge badge-a">A</span>`;
+          } else {
+            statusBadge = `<span class="status-badge badge-empty">${s}</span>`;
+          }
+        }
+
+        // OT Badge
+        let otBadge = '';
+        if (att && att.ot_hours > 0) {
+          countOtHours += att.ot_hours;
+          otBadge = `<span class="status-badge badge-ot">${att.ot_hours}h OT</span>`;
+        }
+
+        // Advance Money
+        let moneyHtml = '<span style="color: #D1D5DB;">-</span>';
+        if (adv && adv.amount > 0) {
+          countAdvance += adv.amount;
+          const noteText = adv.notes ? `(${adv.notes})` : '';
+          moneyHtml = `
+            <div class="adv-text">- ${cur} ${adv.amount}</div>
+            <div class="adv-note">${noteText}</div>
+          `;
+        }
+
+        html += `
+          <div class="daily-item">
+            <div class="date-box">
+              <div class="date-num">${dStr}</div>
+              <div class="date-day">${dayName}</div>
+            </div>
+            <div>
+              ${statusBadge}
+              ${otBadge}
+            </div>
+            <div class="money-box">
+              ${moneyHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('dailyList').innerHTML = html;
+
+      // Update Summary Cards
+      document.getElementById('statPresent').innerText = countPresent;
+      document.getElementById('statAbsent').innerText = countAbsent;
+      document.getElementById('statOt').innerText = `${countOtHours}h`;
+      document.getElementById('statAdvance').innerText = `${cur} ${countAdvance}`;
+
+      // Net balance math
+      let baseEarn = 0;
+      if ((passbookData.salary_type || '').toLowerCase() === 'monthly') {
+        const perDay = passbookData.salary_rate / totalDays;
+        baseEarn = countPresent * perDay;
+      } else {
+        baseEarn = countPresent * passbookData.salary_rate;
+      }
+      const net = baseEarn - countAdvance;
+      const netSign = net >= 0 ? `${cur} ${net.toFixed(2)}` : `- ${cur} ${Math.abs(net).toFixed(2)}`;
+      document.getElementById('statBalance').innerText = netSign;
+      document.getElementById('statBalance').style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+
+    loadPassbook();
+  </script>
+</body>
+</html>
