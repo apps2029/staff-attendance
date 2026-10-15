@@ -178,7 +178,7 @@
 
     .money-box { text-align: right; }
     .adv-text { font-size: 14px; font-weight: 700; color: var(--red); }
-    .adv-note { font-size: 11px; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .adv-note { font-size: 11px; color: var(--text-muted); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .loading-box { text-align: center; padding: 40px 16px; color: var(--text-muted); font-weight: 600; }
     .alert-box {
@@ -377,7 +377,6 @@
       renderMonth();
     }
 
-    // 🌟 Exact calculation helper matching ReportScreen.dart
     function computeMonthPayroll(year, month) {
       const attMap = passbookData.attendance_data || {};
       const advMap = passbookData.advances_data || {};
@@ -408,7 +407,7 @@
           const s = att.status || '';
           if (s === 'P' || s === 'PA' || s === 'PH') tPresent += 1.0;
           else if (s === '1/2' || s === '½') { tPresent += 0.5; tHalf += 1.0; }
-          else if (s === 'P+1/2' || s === 'P + ½') { tPresent += 1.5; tP12 += 1.0; }
+          else if (s === 'P+1/2' || s === 'P + 1/2' || s === 'P + ½' || s === 'P+½') { tPresent += 1.5; tP12 += 1.0; }
           else if (s === 'P+P' || s === 'P + P') { tPresent += 2.0; tPP += 1.0; }
           else if (s === 'A') tAbsent += 1.0;
           else if (s === 'UH') unpaidHolidays += 1.0;
@@ -420,7 +419,6 @@
         }
       }
 
-      // Base Earnings Math (Exact Flutter Code Logic)
       let baseEarnings = 0;
       if (salaryType === 'monthly' && isFixed30) {
         const totalTrackedDays = tPresent + tAbsent + (tHalf * 0.5) + unpaidHolidays;
@@ -438,7 +436,6 @@
         baseEarnings = tPresent * perDayWage;
       }
 
-      // Advance
       let tAdvance = 0;
       for (let day = 1; day <= actualDays; day++) {
         const mStr = String(month + 1).padStart(2, '0');
@@ -448,7 +445,6 @@
         if (adv && adv.amount > 0) tAdvance += Number(adv.amount);
       }
 
-      // Incentive (Timezone safe month check)
       let tIncentive = 0;
       for (const inc of incList) {
         if (inc.date) {
@@ -468,7 +464,6 @@
       };
     }
 
-    // 🌟 Timezone-Safe Cumulative Balance Calculator
     function calculatePreviousMonthBalance(targetYear, targetMonth) {
       const attMap = passbookData.attendance_data || {};
       const advMap = passbookData.advances_data || {};
@@ -477,7 +472,6 @@
 
       if (!config.carry_forward) return 0.0;
 
-      // Safe Earliest Year-Month Detection
       let startYear = targetYear;
       let startMonth = targetMonth;
 
@@ -547,20 +541,15 @@
       const advMap = passbookData.advances_data || {};
       const config = attMap['__config__'] || {};
 
-      // 1. Current Month Payroll
       const current = computeMonthPayroll(year, month);
-
-      // 2. Previous Month Balance
       const prevBalance = calculatePreviousMonthBalance(year, month);
       const isCarryForward = !!config.carry_forward;
       const finalBalance = isCarryForward ? (current.monthBalance + prevBalance) : current.monthBalance;
 
-      // Render Overview Stats
       document.getElementById('statPresent').innerText = current.tPresent % 1 === 0 ? current.tPresent.toFixed(0) : current.tPresent.toFixed(1);
       document.getElementById('statAbsent').innerText = current.tAbsent % 1 === 0 ? current.tAbsent.toFixed(0) : current.tAbsent.toFixed(1);
       document.getElementById('statOt').innerText = `${current.tOtHours}h`;
 
-      // Render Payment Summary
       document.getElementById('payBase').innerText = `${cur} ${formatCurrency(current.baseEarnings)}`;
       
       const rowOt = document.getElementById('rowOt');
@@ -609,7 +598,6 @@
         badge.innerText = '👉 All Dues Cleared (Settled)';
       }
 
-      // Render Daily Table
       let html = '';
       for (let day = 1; day <= totalDays; day++) {
         const dateObj = new Date(year, month, day);
@@ -629,7 +617,7 @@
           else if (s === 'PH') statusBadge = `<span class="status-badge badge-teal">PH</span>`;
           else if (s === 'UH') statusBadge = `<span class="status-badge badge-bluegrey">UH</span>`;
           else if (s === '1/2' || s === '½') statusBadge = `<span class="status-badge badge-p">½</span>`;
-          else if (s === 'P+1/2' || s === 'P + ½') statusBadge = `<span class="status-badge badge-p">1.5</span>`;
+          else if (s === 'P+1/2' || s === 'P + 1/2' || s === 'P + ½' || s === 'P+½') statusBadge = `<span class="status-badge badge-p">1.5</span>`;
           else if (s === 'P+P' || s === 'P + P') statusBadge = `<span class="status-badge badge-p">2.0</span>`;
           else if (s === 'A') statusBadge = `<span class="status-badge badge-a">A</span>`;
           else statusBadge = `<span class="status-badge badge-empty">${s}</span>`;
