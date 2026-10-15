@@ -171,6 +171,8 @@
     }
     .badge-p { background: #DCFCE7; color: #166534; }
     .badge-a { background: #FEE2E2; color: #991B1B; }
+    .badge-teal { background: #CCFBF1; color: #0F766E; }
+    .badge-bluegrey { background: #ECEFF1; color: #455A64; }
     .badge-ot { background: #EDE9FE; color: #5B21B6; font-size: 11px; margin-left: 4px; }
     .badge-empty { background: #F3F4F6; color: #9CA3AF; }
 
@@ -235,7 +237,7 @@
         </div>
       </div>
 
-      <!-- Payment & Settlement Section (Exact ReportScreen replica) -->
+      <!-- Payment & Settlement Section -->
       <div class="section-title">Payment Summary</div>
       <div class="payment-card">
         <div class="pay-row">
@@ -287,6 +289,21 @@
     const monthNames = ["January", "February", "March", "April", "May", "June", 
                         "July", "August", "September", "October", "November", "December"];
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    function formatCurrency(num) {
+      return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function parseYMD(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length < 3) return null;
+      return {
+        year: parseInt(parts[0], 10),
+        month: parseInt(parts[1], 10) - 1,
+        day: parseInt(parts[2], 10)
+      };
+    }
 
     function showError(msg) {
       document.getElementById('loading').style.display = 'none';
@@ -356,7 +373,7 @@
     }
 
     function changeMonth(delta) {
-      currentDate.setMonth(currentDate.getMonth() + delta);
+      currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1);
       renderMonth();
     }
 
@@ -403,7 +420,7 @@
         }
       }
 
-      // Base Earnings Math
+      // Base Earnings Math (Exact Flutter Code Logic)
       let baseEarnings = 0;
       if (salaryType === 'monthly' && isFixed30) {
         const totalTrackedDays = tPresent + tAbsent + (tHalf * 0.5) + unpaidHolidays;
@@ -431,12 +448,12 @@
         if (adv && adv.amount > 0) tAdvance += Number(adv.amount);
       }
 
-      // Incentive
+      // Incentive (Timezone safe month check)
       let tIncentive = 0;
       for (const inc of incList) {
         if (inc.date) {
-          const incDate = new Date(inc.date);
-          if (incDate.getFullYear() === year && incDate.getMonth() === month) {
+          const p = parseYMD(inc.date);
+          if (p && p.year === year && p.month === month) {
             tIncentive += Number(inc.amount) || 0;
           }
         }
@@ -451,7 +468,7 @@
       };
     }
 
-    // 🌟 Previous Month Cumulative Balance Calculator (Matches ReportScreen 100%)
+    // 🌟 Timezone-Safe Cumulative Balance Calculator
     function calculatePreviousMonthBalance(targetYear, targetMonth) {
       const attMap = passbookData.attendance_data || {};
       const advMap = passbookData.advances_data || {};
@@ -460,39 +477,59 @@
 
       if (!config.carry_forward) return 0.0;
 
-      // Earliest date search
-      let earliestDate = config.created_at ? new Date(config.created_at) : new Date(targetYear, targetMonth, 1);
+      // Safe Earliest Year-Month Detection
+      let startYear = targetYear;
+      let startMonth = targetMonth;
+
+      if (config.created_at) {
+        const p = parseYMD(config.created_at);
+        if (p) {
+          startYear = p.year;
+          startMonth = p.month;
+        }
+      }
 
       for (const key of Object.keys(attMap)) {
         if (key !== '__config__') {
-          const d = new Date(key);
-          if (!isNaN(d) && d < earliestDate) earliestDate = d;
+          const p = parseYMD(key);
+          if (p && (p.year < startYear || (p.year === startYear && p.month < startMonth))) {
+            startYear = p.year;
+            startMonth = p.month;
+          }
         }
       }
+
       for (const key of Object.keys(advMap)) {
-        const d = new Date(key);
-        if (!isNaN(d) && d < earliestDate) earliestDate = d;
+        const p = parseYMD(key);
+        if (p && (p.year < startYear || (p.year === startYear && p.month < startMonth))) {
+          startYear = p.year;
+          startMonth = p.month;
+        }
       }
+
       for (const inc of incList) {
         if (inc.date) {
-          const d = new Date(inc.date);
-          if (!isNaN(d) && d < earliestDate) earliestDate = d;
+          const p = parseYMD(inc.date);
+          if (p && (p.year < startYear || (p.year === startYear && p.month < startMonth))) {
+            startYear = p.year;
+            startMonth = p.month;
+          }
         }
       }
 
-      let monthCursor = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
-      const targetMonthStart = new Date(targetYear, targetMonth, 1);
-
-      if (monthCursor >= targetMonthStart) return 0.0;
-
+      let curY = startYear;
+      let curM = startMonth;
       let cumulative = 0.0;
-      while (monthCursor < targetMonthStart) {
-        const curY = monthCursor.getFullYear();
-        const curM = monthCursor.getMonth();
+
+      while (curY < targetYear || (curY === targetYear && curM < targetMonth)) {
         const res = computeMonthPayroll(curY, curM);
         cumulative += res.monthBalance;
 
-        monthCursor.setMonth(monthCursor.getMonth() + 1);
+        curM++;
+        if (curM > 11) {
+          curM = 0;
+          curY++;
+        }
       }
 
       return cumulative;
@@ -524,12 +561,12 @@
       document.getElementById('statOt').innerText = `${current.tOtHours}h`;
 
       // Render Payment Summary
-      document.getElementById('payBase').innerText = `${cur} ${current.baseEarnings.toFixed(2)}`;
+      document.getElementById('payBase').innerText = `${cur} ${formatCurrency(current.baseEarnings)}`;
       
       const rowOt = document.getElementById('rowOt');
       if (current.tOtEarnings > 0) {
         rowOt.style.display = 'flex';
-        document.getElementById('payOt').innerText = `+ ${cur} ${current.tOtEarnings.toFixed(2)}`;
+        document.getElementById('payOt').innerText = `+ ${cur} ${formatCurrency(current.tOtEarnings)}`;
       } else {
         rowOt.style.display = 'none';
       }
@@ -537,36 +574,36 @@
       const rowInc = document.getElementById('rowIncentive');
       if (current.tIncentive > 0) {
         rowInc.style.display = 'flex';
-        document.getElementById('payIncentive').innerText = `+ ${cur} ${current.tIncentive.toFixed(2)}`;
+        document.getElementById('payIncentive').innerText = `+ ${cur} ${formatCurrency(current.tIncentive)}`;
       } else {
         rowInc.style.display = 'none';
       }
 
-      document.getElementById('payTotalEarnings').innerText = `${cur} ${current.totalEarnings.toFixed(2)}`;
-      document.getElementById('payAdvance').innerText = `- ${cur} ${current.tAdvance.toFixed(2)}`;
+      document.getElementById('payTotalEarnings').innerText = `${cur} ${formatCurrency(current.totalEarnings)}`;
+      document.getElementById('payAdvance').innerText = `- ${cur} ${formatCurrency(current.tAdvance)}`;
 
       const rowPrev = document.getElementById('rowPrevBalance');
       if (isCarryForward && prevBalance !== 0) {
         rowPrev.style.display = 'flex';
         const sign = prevBalance >= 0 ? '+ ' : '- ';
         const el = document.getElementById('payPrevBalance');
-        el.innerText = `${sign}${cur} ${Math.abs(prevBalance).toFixed(2)}`;
+        el.innerText = `${sign}${cur} ${formatCurrency(Math.abs(prevBalance))}`;
         el.className = prevBalance >= 0 ? 'pay-val green' : 'pay-val red';
       } else {
         rowPrev.style.display = 'none';
       }
 
       const finalEl = document.getElementById('payFinalBalance');
-      finalEl.innerText = `${cur} ${finalBalance.toFixed(2)}`;
+      finalEl.innerText = `${cur} ${formatCurrency(finalBalance)}`;
       finalEl.style.color = finalBalance >= 0 ? '#111827' : 'var(--red)';
 
       const badge = document.getElementById('settlementBadge');
       if (finalBalance > 0) {
         badge.className = 'settlement-badge settlement-green';
-        badge.innerText = `👉 Owner has to give to Labour: ${cur} ${finalBalance.toFixed(2)}`;
+        badge.innerText = `👉 Owner has to give to Labour: ${cur} ${formatCurrency(finalBalance)}`;
       } else if (finalBalance < 0) {
         badge.className = 'settlement-badge settlement-red';
-        badge.innerText = `👉 Labour has to give to Owner: ${cur} ${Math.abs(finalBalance).toFixed(2)}`;
+        badge.innerText = `👉 Labour has to give to Owner: ${cur} ${formatCurrency(Math.abs(finalBalance))}`;
       } else {
         badge.className = 'settlement-badge settlement-blue';
         badge.innerText = '👉 All Dues Cleared (Settled)';
@@ -587,7 +624,10 @@
         let statusBadge = '<span class="status-badge badge-empty">-</span>';
         if (att && att.status) {
           const s = att.status;
-          if (s === 'P' || s === 'PA' || s === 'PH') statusBadge = `<span class="status-badge badge-p">${s}</span>`;
+          if (s === 'P') statusBadge = `<span class="status-badge badge-p">P</span>`;
+          else if (s === 'PA') statusBadge = `<span class="status-badge badge-p">PA</span>`;
+          else if (s === 'PH') statusBadge = `<span class="status-badge badge-teal">PH</span>`;
+          else if (s === 'UH') statusBadge = `<span class="status-badge badge-bluegrey">UH</span>`;
           else if (s === '1/2' || s === '½') statusBadge = `<span class="status-badge badge-p">½</span>`;
           else if (s === 'P+1/2' || s === 'P + ½') statusBadge = `<span class="status-badge badge-p">1.5</span>`;
           else if (s === 'P+P' || s === 'P + P') statusBadge = `<span class="status-badge badge-p">2.0</span>`;
