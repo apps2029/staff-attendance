@@ -25,7 +25,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text-main); padding-bottom: 30px; }
+    body { background-color: var(--bg); color: var(--text-main); padding-bottom: 40px; }
 
     .header {
       background: var(--primary);
@@ -72,22 +72,75 @@
     }
     .month-title { font-size: 15px; font-weight: 700; }
 
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin: 16px 4px 8px 4px;
+      text-transform: uppercase;
+    }
+
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
       margin-bottom: 12px;
     }
     .stat-card {
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 12px;
+      padding: 10px;
       border: 1px solid var(--border);
+      text-align: center;
     }
-    .stat-card.full-width { grid-column: span 2; }
-    .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-    .stat-val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .stat-val { font-size: 17px; font-weight: 700; margin-top: 4px; }
 
+    /* Payment Breakdown Table (Same as ReportScreen) */
+    .payment-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .pay-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .pay-label { color: var(--text-muted); }
+    .pay-val { font-weight: 700; color: var(--text-main); }
+    .pay-val.purple { color: #7C3AED; }
+    .pay-val.green { color: #059669; }
+    .pay-val.red { color: #DC2626; }
+    .pay-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .pay-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 6px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .settlement-badge {
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 13.5px;
+      margin-top: 10px;
+      border: 1px solid transparent;
+    }
+    .settlement-green { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
+    .settlement-red { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+    .settlement-blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+
+    /* Daily List Table */
     .daily-card {
       background: var(--card-bg);
       border-radius: 14px;
@@ -142,12 +195,12 @@
 <body>
 
   <div class="header">
-    <h1>LaborRegister - Staff Ateendance App</h1>
+    <h1>LaborRegister</h1>
     <p>Staff Attendance & Live Record</p>
   </div>
 
   <div class="container">
-    <div id="loading" class="loading-box">Loading Worker's Record.....</div>
+    <div id="loading" class="loading-box">Loading Worker's Record...</div>
     <div id="errorBox" class="alert-box" style="display: none;"></div>
 
     <div id="content" style="display: none;">
@@ -165,31 +218,61 @@
         <button class="month-btn" onclick="changeMonth(1)">NEXT ▶</button>
       </div>
 
-      <!-- Overview Stats Cards -->
+      <!-- Attendance Summary Section -->
+      <div class="section-title">Attendance Summary</div>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-label">Total Present</div>
+          <div class="stat-label">Present</div>
           <div class="stat-val" id="statPresent" style="color: var(--green);">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Total Absent</div>
+          <div class="stat-label">Absent</div>
           <div class="stat-val" id="statAbsent" style="color: var(--red);">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Overtime Hours</div>
+          <div class="stat-label">Overtime</div>
           <div class="stat-val" id="statOt" style="color: var(--purple);">0h</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Advance</div>
-          <div class="stat-val" id="statAdvance" style="color: var(--red);">₹ 0</div>
-        </div>
-        <div class="stat-card full-width">
-          <div class="stat-label">Net Balance (Estimated)</div>
-          <div class="stat-val" id="statBalance" style="color: var(--primary);">₹ 0</div>
         </div>
       </div>
 
+      <!-- Payment & Settlement Section (Exact ReportScreen replica) -->
+      <div class="section-title">Payment Summary</div>
+      <div class="payment-card">
+        <div class="pay-row">
+          <span class="pay-label">Base Wage Earnings</span>
+          <span class="pay-val" id="payBase">₹ 0.00</span>
+        </div>
+        <div class="pay-row" id="rowOt" style="display: none;">
+          <span class="pay-label">Overtime Earnings</span>
+          <span class="pay-val purple" id="payOt">+ ₹ 0.00</span>
+        </div>
+        <div class="pay-row" id="rowIncentive" style="display: none;">
+          <span class="pay-label">Incentive / Bonus</span>
+          <span class="pay-val green" id="payIncentive">+ ₹ 0.00</span>
+        </div>
+        <div class="pay-divider"></div>
+        <div class="pay-row">
+          <span class="pay-label" style="font-weight: 700;">Total Earnings</span>
+          <span class="pay-val" id="payTotalEarnings">₹ 0.00</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-label">Advance Amount</span>
+          <span class="pay-val red" id="payAdvance">- ₹ 0.00</span>
+        </div>
+        <div class="pay-row" id="rowPrevBalance" style="display: none;">
+          <span class="pay-label">Previous Month Balance</span>
+          <span class="pay-val" id="payPrevBalance">₹ 0.00</span>
+        </div>
+        <div class="pay-divider" style="height: 1.5px; background: #9CA3AF;"></div>
+        <div class="pay-total-row">
+          <span>Final Balance</span>
+          <span id="payFinalBalance">₹ 0.00</span>
+        </div>
+        <div class="settlement-badge" id="settlementBadge">Settled</div>
+      </div>
+
       <!-- Daily Attendance List -->
+      <div class="section-title">Daily Attendance & Advance Breakdown</div>
       <div class="daily-card" id="dailyList"></div>
     </div>
   </div>
@@ -220,15 +303,12 @@
           'Authorization': `Bearer ${SUPABASE_ANON}`
         }
       });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const rows = await res.json();
       return (rows && rows.length > 0) ? rows[0] : null;
     }
 
     async function loadAttendanceData() {
-      const loadingEl = document.getElementById('loading');
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
 
@@ -239,8 +319,6 @@
 
       try {
         let record = null;
-
-        // Try Supabase JS Client first if loaded, else fallback to direct REST
         if (window.supabase && typeof window.supabase.createClient === 'function') {
           const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
           const { data, error } = await client
@@ -249,28 +327,24 @@
             .eq('token', token)
             .maybeSingle();
 
-          if (error) {
-            record = await fetchViaRest(token);
-          } else {
-            record = data;
-          }
+          record = error ? await fetchViaRest(token) : data;
         } else {
           record = await fetchViaRest(token);
         }
 
         if (!record) {
-          showError("❌ Is worker ka koi record cloud par nahi mila.<br><br><b>Karan:</b> App me 'Live Passbook' button par tap karein taaki data internet par sync ho sake, fir is page ko refresh karein.");
+          showError("❌ Is worker ka koi record nahi mila.<br><br><b>Karan:</b> App me 'Live Record' button par tap karein taaki data sync ho sake.");
           return;
         }
 
         passbookData = record;
-        loadingEl.style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
 
         renderProfile();
         renderMonth();
       } catch (err) {
-        showError(`⚠️ Connection Error: ${err.message || err}<br><br>Kripya internet check karein ya refresh karein.`);
+        showError(`⚠️ Connection Error: ${err.message || err}`);
       }
     }
 
@@ -286,6 +360,144 @@
       renderMonth();
     }
 
+    // 🌟 Exact calculation helper matching ReportScreen.dart
+    function computeMonthPayroll(year, month) {
+      const attMap = passbookData.attendance_data || {};
+      const advMap = passbookData.advances_data || {};
+      const incList = passbookData.incentives_data || [];
+      const config = attMap['__config__'] || {};
+
+      const isFixed30 = (config.salary_basis === '30');
+      const salaryType = (passbookData.salary_type || 'daily').toLowerCase();
+      const salaryRate = Number(passbookData.salary_rate) || 0;
+
+      const actualDays = new Date(year, month + 1, 0).getDate();
+      const effectiveDays = isFixed30 ? 30 : actualDays;
+
+      const perDayWage = (salaryType === 'monthly') 
+          ? (effectiveDays > 0 ? (salaryRate / effectiveDays) : 0) 
+          : salaryRate;
+
+      let tPresent = 0, tAbsent = 0, tHalf = 0, tP12 = 0, tPP = 0;
+      let tOtHours = 0, tOtEarnings = 0, unpaidHolidays = 0;
+
+      for (let day = 1; day <= actualDays; day++) {
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${mStr}-${dStr}`;
+
+        const att = attMap[dateKey];
+        if (att) {
+          const s = att.status || '';
+          if (s === 'P' || s === 'PA' || s === 'PH') tPresent += 1.0;
+          else if (s === '1/2' || s === '½') { tPresent += 0.5; tHalf += 1.0; }
+          else if (s === 'P+1/2' || s === 'P + ½') { tPresent += 1.5; tP12 += 1.0; }
+          else if (s === 'P+P' || s === 'P + P') { tPresent += 2.0; tPP += 1.0; }
+          else if (s === 'A') tAbsent += 1.0;
+          else if (s === 'UH') unpaidHolidays += 1.0;
+
+          const otH = Number(att.ot_hours) || 0;
+          const otR = Number(att.ot_rate) || 0;
+          tOtHours += otH;
+          tOtEarnings += (otH * otR);
+        }
+      }
+
+      // Base Earnings Math
+      let baseEarnings = 0;
+      if (salaryType === 'monthly' && isFixed30) {
+        const totalTrackedDays = tPresent + tAbsent + (tHalf * 0.5) + unpaidHolidays;
+        const isFullMonthTracked = totalTrackedDays >= (actualDays - 2);
+
+        if (isFullMonthTracked) {
+          const totalDeductionDays = tAbsent + (tHalf * 0.5) + unpaidHolidays;
+          const extraDaysWorked = (tP12 * 0.5) + (tPP * 1.0);
+          baseEarnings = salaryRate - (totalDeductionDays * perDayWage) + (extraDaysWorked * perDayWage);
+          if (baseEarnings < 0) baseEarnings = 0;
+        } else {
+          baseEarnings = tPresent * perDayWage;
+        }
+      } else {
+        baseEarnings = tPresent * perDayWage;
+      }
+
+      // Advance
+      let tAdvance = 0;
+      for (let day = 1; day <= actualDays; day++) {
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${mStr}-${dStr}`;
+        const adv = advMap[dateKey];
+        if (adv && adv.amount > 0) tAdvance += Number(adv.amount);
+      }
+
+      // Incentive
+      let tIncentive = 0;
+      for (const inc of incList) {
+        if (inc.date) {
+          const incDate = new Date(inc.date);
+          if (incDate.getFullYear() === year && incDate.getMonth() === month) {
+            tIncentive += Number(inc.amount) || 0;
+          }
+        }
+      }
+
+      const totalEarnings = baseEarnings + tOtEarnings + tIncentive;
+      const monthBalance = totalEarnings - tAdvance;
+
+      return {
+        tPresent, tAbsent, tHalf, tP12, tPP, tOtHours, tOtEarnings,
+        baseEarnings, tAdvance, tIncentive, totalEarnings, monthBalance
+      };
+    }
+
+    // 🌟 Previous Month Cumulative Balance Calculator (Matches ReportScreen 100%)
+    function calculatePreviousMonthBalance(targetYear, targetMonth) {
+      const attMap = passbookData.attendance_data || {};
+      const advMap = passbookData.advances_data || {};
+      const incList = passbookData.incentives_data || [];
+      const config = attMap['__config__'] || {};
+
+      if (!config.carry_forward) return 0.0;
+
+      // Earliest date search
+      let earliestDate = config.created_at ? new Date(config.created_at) : new Date(targetYear, targetMonth, 1);
+
+      for (const key of Object.keys(attMap)) {
+        if (key !== '__config__') {
+          const d = new Date(key);
+          if (!isNaN(d) && d < earliestDate) earliestDate = d;
+        }
+      }
+      for (const key of Object.keys(advMap)) {
+        const d = new Date(key);
+        if (!isNaN(d) && d < earliestDate) earliestDate = d;
+      }
+      for (const inc of incList) {
+        if (inc.date) {
+          const d = new Date(inc.date);
+          if (!isNaN(d) && d < earliestDate) earliestDate = d;
+        }
+      }
+
+      let monthCursor = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+      const targetMonthStart = new Date(targetYear, targetMonth, 1);
+
+      if (monthCursor >= targetMonthStart) return 0.0;
+
+      let cumulative = 0.0;
+      while (monthCursor < targetMonthStart) {
+        const curY = monthCursor.getFullYear();
+        const curM = monthCursor.getMonth();
+        const res = computeMonthPayroll(curY, curM);
+        cumulative += res.monthBalance;
+
+        monthCursor.setMonth(monthCursor.getMonth() + 1);
+      }
+
+      return cumulative;
+    }
+
     function renderMonth() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -296,18 +508,75 @@
       const totalDays = new Date(year, month + 1, 0).getDate();
       const attMap = passbookData.attendance_data || {};
       const advMap = passbookData.advances_data || {};
+      const config = attMap['__config__'] || {};
 
-      let countPresent = 0;
-      let countAbsent = 0;
-      let countOtHours = 0;
-      let countAdvance = 0;
+      // 1. Current Month Payroll
+      const current = computeMonthPayroll(year, month);
 
+      // 2. Previous Month Balance
+      const prevBalance = calculatePreviousMonthBalance(year, month);
+      const isCarryForward = !!config.carry_forward;
+      const finalBalance = isCarryForward ? (current.monthBalance + prevBalance) : current.monthBalance;
+
+      // Render Overview Stats
+      document.getElementById('statPresent').innerText = current.tPresent % 1 === 0 ? current.tPresent.toFixed(0) : current.tPresent.toFixed(1);
+      document.getElementById('statAbsent').innerText = current.tAbsent % 1 === 0 ? current.tAbsent.toFixed(0) : current.tAbsent.toFixed(1);
+      document.getElementById('statOt').innerText = `${current.tOtHours}h`;
+
+      // Render Payment Summary
+      document.getElementById('payBase').innerText = `${cur} ${current.baseEarnings.toFixed(2)}`;
+      
+      const rowOt = document.getElementById('rowOt');
+      if (current.tOtEarnings > 0) {
+        rowOt.style.display = 'flex';
+        document.getElementById('payOt').innerText = `+ ${cur} ${current.tOtEarnings.toFixed(2)}`;
+      } else {
+        rowOt.style.display = 'none';
+      }
+
+      const rowInc = document.getElementById('rowIncentive');
+      if (current.tIncentive > 0) {
+        rowInc.style.display = 'flex';
+        document.getElementById('payIncentive').innerText = `+ ${cur} ${current.tIncentive.toFixed(2)}`;
+      } else {
+        rowInc.style.display = 'none';
+      }
+
+      document.getElementById('payTotalEarnings').innerText = `${cur} ${current.totalEarnings.toFixed(2)}`;
+      document.getElementById('payAdvance').innerText = `- ${cur} ${current.tAdvance.toFixed(2)}`;
+
+      const rowPrev = document.getElementById('rowPrevBalance');
+      if (isCarryForward && prevBalance !== 0) {
+        rowPrev.style.display = 'flex';
+        const sign = prevBalance >= 0 ? '+ ' : '- ';
+        const el = document.getElementById('payPrevBalance');
+        el.innerText = `${sign}${cur} ${Math.abs(prevBalance).toFixed(2)}`;
+        el.className = prevBalance >= 0 ? 'pay-val green' : 'pay-val red';
+      } else {
+        rowPrev.style.display = 'none';
+      }
+
+      const finalEl = document.getElementById('payFinalBalance');
+      finalEl.innerText = `${cur} ${finalBalance.toFixed(2)}`;
+      finalEl.style.color = finalBalance >= 0 ? '#111827' : 'var(--red)';
+
+      const badge = document.getElementById('settlementBadge');
+      if (finalBalance > 0) {
+        badge.className = 'settlement-badge settlement-green';
+        badge.innerText = `👉 Owner has to give to Labour: ${cur} ${finalBalance.toFixed(2)}`;
+      } else if (finalBalance < 0) {
+        badge.className = 'settlement-badge settlement-red';
+        badge.innerText = `👉 Labour has to give to Owner: ${cur} ${Math.abs(finalBalance).toFixed(2)}`;
+      } else {
+        badge.className = 'settlement-badge settlement-blue';
+        badge.innerText = '👉 All Dues Cleared (Settled)';
+      }
+
+      // Render Daily Table
       let html = '';
-
       for (let day = 1; day <= totalDays; day++) {
         const dateObj = new Date(year, month, day);
         const dayName = dayNames[dateObj.getDay()];
-        
         const mStr = String(month + 1).padStart(2, '0');
         const dStr = String(day).padStart(2, '0');
         const dateKey = `${year}-${mStr}-${dStr}`;
@@ -318,35 +587,21 @@
         let statusBadge = '<span class="status-badge badge-empty">-</span>';
         if (att && att.status) {
           const s = att.status;
-          if (s === 'P' || s === 'PA' || s === 'PH') {
-            countPresent += 1;
-            statusBadge = `<span class="status-badge badge-p">${s}</span>`;
-          } else if (s === '1/2' || s === '½') {
-            countPresent += 0.5;
-            statusBadge = `<span class="status-badge badge-p">½</span>`;
-          } else if (s === 'P+1/2' || s === 'P + ½') {
-            countPresent += 1.5;
-            statusBadge = `<span class="status-badge badge-p">1.5</span>`;
-          } else if (s === 'P+P' || s === 'P + P') {
-            countPresent += 2;
-            statusBadge = `<span class="status-badge badge-p">2.0</span>`;
-          } else if (s === 'A') {
-            countAbsent += 1;
-            statusBadge = `<span class="status-badge badge-a">A</span>`;
-          } else {
-            statusBadge = `<span class="status-badge badge-empty">${s}</span>`;
-          }
+          if (s === 'P' || s === 'PA' || s === 'PH') statusBadge = `<span class="status-badge badge-p">${s}</span>`;
+          else if (s === '1/2' || s === '½') statusBadge = `<span class="status-badge badge-p">½</span>`;
+          else if (s === 'P+1/2' || s === 'P + ½') statusBadge = `<span class="status-badge badge-p">1.5</span>`;
+          else if (s === 'P+P' || s === 'P + P') statusBadge = `<span class="status-badge badge-p">2.0</span>`;
+          else if (s === 'A') statusBadge = `<span class="status-badge badge-a">A</span>`;
+          else statusBadge = `<span class="status-badge badge-empty">${s}</span>`;
         }
 
         let otBadge = '';
         if (att && att.ot_hours > 0) {
-          countOtHours += att.ot_hours;
           otBadge = `<span class="status-badge badge-ot">${att.ot_hours}h OT</span>`;
         }
 
         let moneyHtml = '<span style="color: #D1D5DB;">-</span>';
         if (adv && adv.amount > 0) {
-          countAdvance += adv.amount;
           const noteText = adv.notes ? `(${adv.notes})` : '';
           moneyHtml = `
             <div class="adv-text">- ${cur} ${adv.amount}</div>
@@ -372,23 +627,6 @@
       }
 
       document.getElementById('dailyList').innerHTML = html;
-
-      document.getElementById('statPresent').innerText = countPresent;
-      document.getElementById('statAbsent').innerText = countAbsent;
-      document.getElementById('statOt').innerText = `${countOtHours}h`;
-      document.getElementById('statAdvance').innerText = `${cur} ${countAdvance}`;
-
-      let baseEarn = 0;
-      if ((passbookData.salary_type || '').toLowerCase() === 'monthly') {
-        const perDay = passbookData.salary_rate / totalDays;
-        baseEarn = countPresent * perDay;
-      } else {
-        baseEarn = countPresent * passbookData.salary_rate;
-      }
-      const net = baseEarn - countAdvance;
-      const netSign = net >= 0 ? `${cur} ${net.toFixed(2)}` : `- ${cur} ${Math.abs(net).toFixed(2)}`;
-      document.getElementById('statBalance').innerText = netSign;
-      document.getElementById('statBalance').style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
     }
 
     loadAttendanceData();
