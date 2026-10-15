@@ -641,12 +641,18 @@
         }
 
         let moneyHtml = '<span style="color: #D1D5DB;">-</span>';
-        if (adv && adv.amount > 0) {
-          const noteText = adv.notes ? `(${adv.notes})` : '';
-          moneyHtml = `
-            <div class="adv-text">- ${cur} ${adv.amount}</div>
-            <div class="adv-note">${noteText}</div>
-          `;
+        if (adv && (adv.amount > 0 || (adv.notes && adv.notes.trim().length > 0))) {
+          if (adv.amount > 0) {
+            const noteText = adv.notes ? `(${adv.notes})` : '';
+            moneyHtml = `
+              <div class="adv-text">- ${cur} ${formatCurrency(adv.amount)}</div>
+              <div class="adv-note">${noteText}</div>
+            `;
+          } else {
+            moneyHtml = `
+              <div class="adv-note" style="color: var(--primary); font-weight: 700;">Note: ${adv.notes}</div>
+            `;
+          }
         }
 
         html += `
