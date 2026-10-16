@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LaborRegister - Manager Portal</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Manager Portal">
+  <meta name="theme-color" content="#1B55C0">
+  <link rel="apple-touch-icon" href="https://apps2029.github.io/staff-attendance/icon.png">
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --primary: #1B55C0;
+      --bg: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --green: #2E7D32;
+      --red: #DC2626;
+      --amber: #D97706;
+      --purple: #7C3AED;
+      --teal: #0D9488;
+      --bluegrey: #475569;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --card-bg: #1E1E1E;
+        --text: #F8FAFC;
+        --text-muted: #94A3B8;
+        --border: #334155;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 90px; }
+
+    /* Top Navbar */
+    .navbar {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand { font-size: 16px; font-weight: 800; color: var(--primary); }
+    .badge-admin { background: #FEF3C7; color: #92400E; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+    .badge-standard { background: #DBEAFE; color: #1E40AF; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 14px; }
+
+    /* Branch & Date Controls */
+    .control-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .site-select {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+    }
+    .date-nav-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: bold;
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    /* Worker Card */
+    .worker-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .worker-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .worker-name { font-size: 15px; font-weight: 700; }
+    .worker-sub { font-size: 12px; color: var(--text-muted); }
+
+    /* 9 Attendance Buttons Grid */
+    .att-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .btn-att {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 11px;
+      padding: 7px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-att.active-P { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-att.active-A { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn-att.active-half { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .btn-att.active-P12 { background: #B45309; color: #fff; border-color: #B45309; }
+    .btn-att.active-PP { background: #047857; color: #fff; border-color: #047857; }
+    .btn-att.active-OT { background: var(--purple); color: #fff; border-color: var(--purple); }
+    .btn-att.active-PA { background: #9333EA; color: #fff; border-color: #9333EA; }
+    .btn-att.active-PH { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .btn-att.active-UH { background: var(--bluegrey); color: #fff; border-color: var(--bluegrey); }
+
+    /* Action buttons (+ Advance, + Bonus, Delete) */
+    .action-row { display: flex; gap: 6px; }
+    .btn-action {
+      flex: 1;
+      padding: 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .btn-delete {
+      background: #FEE2E2;
+      color: #991B1B;
+      border-color: #FCA5A5;
+      font-weight: bold;
+    }
+
+    /* Floating Add Labor Button */
+    .fab-add {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 14px;
+      border: none;
+      box-shadow: 0 4px 12px rgba(27,85,192,0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 80;
+    }
+
+    /* Modal Sheet */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 500;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 500px;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.2);
+    }
+    .input-box {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+
+    /* Lock Screen */
+    .lock-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      z-index: 999;
+    }
+    .pin-input {
+      font-size: 28px;
+      letter-spacing: 12px;
+      text-align: center;
+      width: 180px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 2px solid var(--primary);
+      background: var(--card-bg);
+      color: var(--text);
+      margin: 18px 0;
+      outline: none;
+    }
+
+    /* PWA Banner */
+    .pwa-banner {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      max-width: 568px;
+      margin: 0 auto;
+      background: #1E293B;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 90;
+    }
+    .pwa-btn { background: var(--primary); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- 🔒 PIN Lock Screen -->
+  <div id="lockScreen" class="lock-screen">
+    <div style="font-size: 38px; margin-bottom: 8px;">🏢</div>
+    <h2 id="managerGreeting" style="font-size: 20px; font-weight: 800;">Manager Portal</h2>
+    <p id="lockSubtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enter your 4-digit PIN to access</p>
+    
+    <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="••••">
+    
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--text-muted);">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe">Remember me on this phone</label>
+    </div>
+
+    <button onclick="verifyPin()" style="width: 180px; height: 44px; background: var(--primary); color: #fff; border: none; border-radius: 22px; font-weight: 700; font-size: 15px; cursor: pointer;">
+      Unlock Portal
+    </button>
+  </div>
+
+  <!-- 📱 Main Portal UI -->
+  <div id="mainApp" style="display: none;">
+    <nav class="navbar">
+      <div>
+        <span class="brand">LaborRegister</span>
+        <span id="roleBadge" class="badge-standard">Standard</span>
+      </div>
+      <div style="font-size: 12px; font-weight: bold; color: var(--text-muted);" id="managerNameTag"></div>
+    </nav>
+
+    <div class="container">
+      <!-- Controls Card (Branch Selector + Date Bar) -->
+      <div class="control-card">
+        <div class="control-row">
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Site / Branch:</span>
+          <select id="siteDropdown" class="site-select" onchange="switchSite()"></select>
+        </div>
+        <div class="control-row" style="border-top: 1px solid var(--border); padding-top: 8px;">
+          <button class="date-nav-btn" onclick="changeDate(-1)">◀ Prev</button>
+          <input type="date" id="selectedDateInput" onchange="onDateChanged()" style="background:transparent; border:none; color:var(--text); font-weight:bold; font-size:14px; outline:none; cursor:pointer;">
+          <button class="date-nav-btn" onclick="changeDate(1)">Next ▶</button>
+        </div>
+      </div>
+
+      <!-- Workers List -->
+      <div id="workersList"></div>
+    </div>
+
+    <!-- Floating + Add Labor Button -->
+    <button class="fab-add" onclick="openAddWorkerModal()">
+      <span>+</span> Add Labor
+    </button>
+  </div>
+
+  <!-- Add Worker Modal -->
+  <div id="addWorkerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 12px;">Add New Labor</h3>
+      <label style="font-size: 12px; color: var(--text-muted);">Labor Name *</label>
+      <input type="text" id="newWorkerName" class="input-box" placeholder="e.g. Ramesh Mistri">
+      
+      <label style="font-size: 12px; color: var(--text-muted);">Role / Designation</label>
+      <input type="text" id="newWorkerRole" class="input-box" placeholder="e.g. Painter, Helper">
+
+      <label style="font-size: 12px; color: var(--text-muted);">Mobile Number</label>
+      <input type="tel" id="newWorkerPhone" class="input-box" placeholder="e.g. 9876543210">
+
+      <label style="font-size: 12px; color: var(--text-muted);">Salary Amount (₹)</label>
+      <input type="number" id="newWorkerWage" class="input-box" placeholder="e.g. 600">
+
+      <div style="display: flex; gap: 8px; margin-top: 8px;">
+        <button onclick="closeAddWorkerModal()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-weight: bold; cursor: pointer;">Cancel</button>
+        <button onclick="submitNewWorker()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: var(--primary); color: #fff; font-weight: bold; cursor: pointer;">Save Labor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA Install Banner -->
+  <div id="pwaBanner" class="pwa-banner" style="display: none;">
+    <span id="pwaText">📲 Add to Home Screen for 1-tap daily access!</span>
+    <button class="pwa-btn" onclick="installPwa()">Add</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://mwpannzrpftuampoieak.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Obg1n-jKMS2HSL1da9Ldpw_woy3Ga5C';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const managerId = urlParams.get('m') || localStorage.getItem('lr_manager_id');
+
+    let currentManager = null;
+    let assignedSites = [];
+    let activeSiteId = '';
+    let allWorkers = [];
+
+    let currentDate = new Date();
+    let currentDateStr = currentDate.toISOString().split('T')[0];
+
+    window.onload = async () => {
+      document.getElementById('selectedDateInput').value = currentDateStr;
+      checkPwaPrompt();
+
+      if (managerId) {
+        localStorage.setItem('lr_manager_id', managerId);
+        await fetchManagerInfo(managerId);
+      } else {
+        document.getElementById('lockSubtitle').innerText = "Invalid link. Please open WhatsApp link sent by Owner.";
+      }
+
+      const savedPin = localStorage.getItem('lr_saved_pin');
+      if (savedPin) {
+        document.getElementById('pinInput').value = savedPin;
+        verifyPin();
+      }
+    };
+
+    function changeDate(delta) {
+      currentDate.setDate(currentDate.getDate() + delta);
+      currentDateStr = currentDate.toISOString().split('T')[0];
+      document.getElementById('selectedDateInput').value = currentDateStr;
+      renderWorkers();
+    }
+
+    function onDateChanged() {
+      currentDateStr = document.getElementById('selectedDateInput').value;
+      currentDate = new Date(currentDateStr);
+      renderWorkers();
+    }
+
+    async function fetchManagerInfo(mId) {
+      try {
+        const { data } = await supabase
+          .from('manager_access')
+          .select('*')
+          .eq('manager_id', mId)
+          .single();
+
+        if (data) {
+          currentManager = data;
+          document.getElementById('managerGreeting').innerText = `Hello, ${data.manager_name}`;
+          document.getElementById('managerNameTag').innerText = data.manager_name;
+        }
+      } catch (e) {
+        console.log('Manager fetch error:', e);
+      }
+    }
+
+    async function verifyPin() {
+      const enteredPin = document.getElementById('pinInput').value.trim();
+      if (enteredPin.length !== 4) return alert('Please enter 4-digit PIN');
+
+      if (!currentManager && managerId) {
+        await fetchManagerInfo(managerId);
+      }
+
+      if (currentManager && currentManager.pin !== enteredPin) {
+        return alert('Incorrect PIN. Please ask Owner for your correct PIN.');
+      }
+
+      if (document.getElementById('rememberMe').checked) {
+        localStorage.setItem('lr_saved_pin', enteredPin);
+      }
+
+      document.getElementById('lockScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+
+      if (currentManager) {
+        const badge = document.getElementById('roleBadge');
+        if (currentManager.role === 'admin') {
+          badge.className = 'badge-admin';
+          badge.innerText = 'Admin Access';
+        } else {
+          badge.className = 'badge-standard';
+          badge.innerText = 'Standard Access';
+        }
+        assignedSites = currentManager.assigned_sites || [{ id: 'default_site', name: 'Main Branch' }];
+      } else {
+        assignedSites = [{ id: 'default_site', name: 'Main Branch' }];
+      }
+
+      const select = document.getElementById('siteDropdown');
+      select.innerHTML = assignedSites.map(s => `<option value="${s.id}">📍 ${s.name}</option>`).join('');
+      activeSiteId = assignedSites[0].id;
+
+      await loadWorkers();
+    }
+
+    async function loadWorkers() {
+      try {
+        const siteIds = assignedSites.map(s => s.id);
+        const { data, error } = await supabase
+          .from('worker_passbooks')
+          .select('*')
+          .in('site_id', siteIds);
+
+        allWorkers = data || [];
+        renderWorkers();
+      } catch (e) {
+        console.error('Load workers error:', e);
+      }
+    }
+
+    function switchSite() {
+      activeSiteId = document.getElementById('siteDropdown').value;
+      renderWorkers();
+    }
+
+    function renderWorkers() {
+      const listDiv = document.getElementById('workersList');
+      const filtered = allWorkers.filter(w => (w.site_id || 'default_site') === activeSiteId);
+      const isAdmin = (currentManager && currentManager.role === 'admin');
+
+      if (filtered.length === 0) {
+        listDiv.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">No staff registered in this branch yet.<br>Tap <b>+ Add Labor</b> below to register workers!</div>`;
+        return;
+      }
+
+      listDiv.innerHTML = filtered.map(worker => {
+        const attData = worker.attendance_data || {};
+        const dayRecord = attData[currentDateStr] || {};
+        const status = dayRecord.status || '';
+
+        return `
+          <div class="worker-card" id="card_${worker.worker_id}">
+            <div class="worker-header">
+              <div>
+                <div class="worker-name">${worker.worker_name}</div>
+                <div class="worker-sub">${worker.designation || 'Staff'} • ${worker.currency_symbol || '₹'}${worker.salary_rate}/${worker.salary_type || 'Daily'}</div>
+              </div>
+              <span style="font-size: 11px; font-weight: 700; color: var(--green);">Active</span>
+            </div>
+
+            <!-- 9 Attendance Buttons -->
+            <div class="att-grid">
+              <button class="btn-att ${status === 'P' ? 'active-P' : ''}" onclick="saveAtt('${worker.worker_id}', 'P')">P</button>
+              <button class="btn-att ${status === 'A' ? 'active-A' : ''}" onclick="saveAtt('${worker.worker_id}', 'A')">A</button>
+              <button class="btn-att ${status === '½' ? 'active-half' : ''}" onclick="saveAtt('${worker.worker_id}', '½')">½</button>
+              <button class="btn-att ${status === 'P+½' ? 'active-P12' : ''}" onclick="saveAtt('${worker.worker_id}', 'P+½')">P+½</button>
+              <button class="btn-att ${status === 'P+P' ? 'active-PP' : ''}" onclick="saveAtt('${worker.worker_id}', 'P+P')">P+P</button>
+              <button class="btn-att ${dayRecord.ot_hours > 0 ? 'active-OT' : ''}" onclick="saveOt('${worker.worker_id}')">OT</button>
+              <button class="btn-att ${status === 'PA' ? 'active-PA' : ''}" onclick="saveAtt('${worker.worker_id}', 'PA')">PA</button>
+              <button class="btn-att ${status === 'PH' ? 'active-PH' : ''}" onclick="saveAtt('${worker.worker_id}', 'PH')">PH</button>
+              <button class="btn-att ${status === 'UH' ? 'active-UH' : ''}" onclick="saveAtt('${worker.worker_id}', 'UH')">UH</button>
+            </div>
+
+            <div class="action-row">
+              <button class="btn-action" onclick="saveAdvance('${worker.worker_id}')">+ Advance</button>
+              <button class="btn-action" onclick="saveIncentive('${worker.worker_id}')">+ Bonus</button>
+              ${isAdmin ? `<button class="btn-action btn-delete" onclick="deleteWorker('${worker.worker_id}', '${worker.worker_name}')">Delete</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveAtt(workerId, targetStatus) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      const attData = worker.attendance_data || {};
+      const curStatus = attData[currentDateStr]?.status || '';
+
+      if (curStatus === targetStatus) {
+        delete attData[currentDateStr];
+      } else {
+        attData[currentDateStr] = {
+          status: targetStatus,
+          ot_hours: attData[currentDateStr]?.ot_hours || 0,
+          ot_rate: attData[currentDateStr]?.ot_rate || 0
+        };
+      }
+
+      renderWorkers();
+
+      await supabase.from('worker_passbooks').update({
+        attendance_data: attData,
+        updated_at: new Date().toISOString()
+      }).eq('worker_id', workerId);
+    }
+
+    async function saveOt(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      const hours = prompt('Enter Overtime hours (e.g. 2):', '1');
+      if (hours === null) return;
+
+      const attData = worker.attendance_data || {};
+      const numHours = parseFloat(hours) || 0;
+
+      if (numHours <= 0) {
+        if (attData[currentDateStr]) {
+          attData[currentDateStr].ot_hours = 0;
+        }
+      } else {
+        attData[currentDateStr] = {
+          status: attData[currentDateStr]?.status || 'P',
+          ot_hours: numHours,
+          ot_rate: attData[currentDateStr]?.ot_rate || 0
+        };
+      }
+
+      renderWorkers();
+
+      await supabase.from('worker_passbooks').update({
+        attendance_data: attData,
+        updated_at: new Date().toISOString()
+      }).eq('worker_id', workerId);
+    }
+
+    async function saveAdvance(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      const amt = prompt('Enter Advance Amount (₹):');
+      if (!amt || isNaN(amt) || parseFloat(amt) <= 0) return;
+
+      const note = prompt('Purpose / Note (e.g. Petrol, Khana):', 'Advance') || 'Advance';
+      const advData = worker.advances_data || {};
+
+      advData[currentDateStr] = {
+        amount: parseFloat(amt),
+        mode: 'Cash',
+        notes: note
+      };
+
+      await supabase.from('worker_passbooks').update({
+        advances_data: advData,
+        updated_at: new Date().toISOString()
+      }).eq('worker_id', workerId);
+
+      alert(`Advance of ₹${amt} recorded successfully!`);
+    }
+
+    async function saveIncentive(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      const amt = prompt('Enter Bonus / Incentive Amount (₹):');
+      if (!amt || isNaN(amt) || parseFloat(amt) <= 0) return;
+
+      const note = prompt('Incentive Note (e.g. Good Work, Festival):', 'Bonus') || 'Bonus';
+      const incList = worker.incentives_data || [];
+
+      incList.push({
+        date: currentDateStr,
+        amount: parseFloat(amt),
+        mode: 'Cash',
+        notes: note
+      });
+
+      await supabase.from('worker_passbooks').update({
+        incentives_data: incList,
+        updated_at: new Date().toISOString()
+      }).eq('worker_id', workerId);
+
+      alert(`Bonus of ₹${amt} recorded successfully!`);
+    }
+
+    async function deleteWorker(workerId, workerName) {
+      if (!confirm(`Are you sure you want to permanently delete "${workerName}"? This action cannot be undone.`)) return;
+
+      await supabase.from('worker_passbooks').delete().eq('worker_id', workerId);
+      allWorkers = allWorkers.filter(w => w.worker_id !== workerId);
+      renderWorkers();
+      alert(`Worker "${workerName}" deleted.`);
+    }
+
+    function openAddWorkerModal() {
+      document.getElementById('newWorkerName').value = '';
+      document.getElementById('newWorkerRole').value = '';
+      document.getElementById('newWorkerPhone').value = '';
+      document.getElementById('newWorkerWage').value = '';
+      document.getElementById('addWorkerModal').style.display = 'flex';
+    }
+
+    function closeAddWorkerModal() {
+      document.getElementById('addWorkerModal').style.display = 'none';
+    }
+
+    async function submitNewWorker() {
+      const name = document.getElementById('newWorkerName').value.trim();
+      if (!name) return alert('Please enter labor name');
+
+      const role = document.getElementById('newWorkerRole').value.trim() || 'Staff';
+      const phone = document.getElementById('newWorkerPhone').value.trim() || 'No Number';
+      const wage = parseFloat(document.getElementById('newWorkerWage').value.trim()) || 0;
+
+      const newId = `wkr_${Date.now()}`;
+      const token = `tok_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+      const newWorkerPayload = {
+        token: token,
+        worker_id: newId,
+        worker_name: name,
+        designation: role,
+        salary_rate: wage,
+        salary_type: 'Daily',
+        currency_symbol: '₹',
+        site_id: activeSiteId,
+        attendance_data: {},
+        advances_data: {},
+        incentives_data: [],
+        updated_at: new Date().toISOString()
+      };
+
+      await supabase.from('worker_passbooks').insert(newWorkerPayload);
+      allWorkers.push(newWorkerPayload);
+      closeAddWorkerModal();
+      renderWorkers();
+      alert(`Worker "${name}" added to this branch!`);
+    }
+
+    let deferredPrompt;
+    function checkPwaPrompt() {
+      const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+      if (isStandalone) return;
+
+      if (isIos) {
+        document.getElementById('pwaText').innerText = "📲 Tap Safari Share [⎋] and choose 'Add to Home Screen'!";
+        document.querySelector('.pwa-btn').style.display = 'none';
+        document.getElementById('pwaBanner').style.display = 'flex';
+      } else {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          document.getElementById('pwaBanner').style.display = 'flex';
+        });
+      }
+    }
+
+    function installPwa() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          document.getElementById('pwaBanner').style.display = 'none';
+        });
+      }
+    }
+  </script>
+</body>
+</html>
