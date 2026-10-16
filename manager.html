@@ -664,7 +664,11 @@
         updated_at: new Date().toISOString()
       };
 
-      await supabase.from('worker_passbooks').insert(newWorkerPayload);
+      const { error } = await supabase.from('worker_passbooks').insert(newWorkerPayload);
+      if (error) {
+        alert('Supabase Error: ' + error.message);
+        return;
+      }
       allWorkers.push(newWorkerPayload);
       closeAddWorkerModal();
       renderWorkers();
