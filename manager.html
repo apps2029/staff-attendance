@@ -342,8 +342,8 @@
   <script>
     const SUPABASE_URL = 'https://mwpannzrpftuampoieak.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_Obg1n-jKMS2HSL1da9Ldpw_woy3Ga5C';
-    const _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-    window.db = _supabase;
+    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var supabase = window.supabase;
 
     const urlParams = new URLSearchParams(window.location.search);
     const managerId = urlParams.get('m') || localStorage.getItem('lr_manager_id');
