@@ -1,46 +1,150 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="/staff-attendance/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="LaborRegister - Staff Attendance & Business Portal">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="labor_register_daily_attendance">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="LaborRegister">
+  <link rel="apple-touch-icon" href="favicon.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>labor_register_daily_attendance</title>
+  <title>LaborRegister - Daily Attendance</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* 🌟 सुंदर और स्लीक 'Add to Home Screen' बैनर */
+    #pwa-install-banner {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 16px;
+      right: 16px;
+      max-width: 420px;
+      margin: 0 auto;
+      background: #1E1E1E;
+      color: #FFFFFF;
+      padding: 12px 14px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      z-index: 99999999;
+      align-items: center;
+      gap: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(80px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    #pwa-install-banner img {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .pwa-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .pwa-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .pwa-sub {
+      font-size: 11px;
+      color: #A0A0A0;
+    }
+    .pwa-btn {
+      background: #1B55C0;
+      color: #FFFFFF;
+      border: none;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .pwa-close {
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <!-- 🌟 Home Screen Install Floating Card -->
+  <div id="pwa-install-banner">
+    <img src="favicon.png" alt="App Icon">
+    <div class="pwa-text">
+      <span class="pwa-title">Install LaborRegister</span>
+      <span class="pwa-sub">Add to phone for 1-tap fast access</span>
+    </div>
+    <button class="pwa-btn" onclick="installPwa()">Install</button>
+    <button class="pwa-close" onclick="dismissPwa()">✕</button>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    let deferredPrompt = null;
+    const banner = document.getElementById('pwa-install-banner');
+
+    // अगर पहले से होम स्क्रीन पर इंस्टॉल है तो कभी न दिखे
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      // अगर पहले से इंस्टॉल नहीं है और लोकल स्टोरेज में इंस्टॉल्ड नहीं है
+      if (!isStandalone && !localStorage.getItem('pwa_installed')) {
+        banner.style.display = 'flex';
+      }
+      window.dispatchEvent(new CustomEvent('pwa-installable'));
+    });
+
+    function installPwa() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            localStorage.setItem('pwa_installed', 'true');
+            banner.style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    function dismissPwa() {
+      banner.style.display = 'none';
+    }
+
+    window.addEventListener('appinstalled', () => {
+      localStorage.setItem('pwa_installed', 'true');
+      banner.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    window.promptPwaInstall = installPwa;
+  </script>
 </body>
 </html>
