@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LaborRegister - Manager Portal</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1B55C0">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --primary: #1B55C0;
+      --bg: #F4F6F9;
+      --card: #FFFFFF;
+      --text: #1F2937;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --green: #10B981;
+      --red: #EF4444;
+      --amber: #D97706;
+      --purple: #8B5CF6;
+      --teal: #0D9488;
+      --bluegrey: #475569;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; }
+
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header span { font-size: 11px; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 6px; }
+
+    .container { max-width: 560px; margin: 0 auto; padding: 12px; }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 4px;
+      margin-bottom: 12px;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--primary); color: white; }
+
+    /* Login Box */
+    .login-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 32px 20px;
+      border: 1px solid var(--border);
+      text-align: center;
+      margin-top: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .pin-input {
+      font-size: 28px;
+      letter-spacing: 12px;
+      text-align: center;
+      width: 170px;
+      padding: 10px;
+      margin: 18px auto;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      outline: none;
+      display: block;
+    }
+    .btn-submit {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 25px;
+      cursor: pointer;
+      width: 100%;
+      max-width: 200px;
+    }
+
+    /* Date Bar */
+    .date-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .date-nav-btn {
+      background: #EEF2F6;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    /* Worker Card */
+    .worker-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .w-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .w-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .w-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* 9 Attendance Buttons */
+    .att-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .btn-att {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 11.5px;
+      padding: 8px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-att.active-P { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-att.active-A { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn-att.active-half { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .btn-att.active-P12 { background: #B45309; color: #fff; border-color: #B45309; }
+    .btn-att.active-PP { background: #047857; color: #fff; border-color: #047857; }
+    .btn-att.active-OT { background: var(--purple); color: #fff; border-color: var(--purple); }
+    .btn-att.active-PA { background: #9333EA; color: #fff; border-color: #9333EA; }
+    .btn-att.active-PH { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .btn-att.active-UH { background: var(--bluegrey); color: #fff; border-color: var(--bluegrey); }
+
+    .action-row { display: flex; gap: 8px; }
+    .btn-action {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: #F3F4F6;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    /* Cashbook Card */
+    .cash-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .alert-box {
+      background: #FEE2E2;
+      color: #991B1B;
+      border: 1px solid #F87171;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>LaborRegister</h1>
+    <span id="headerStatus">Manager Access</span>
+  </div>
+
+  <div class="container">
+    <div id="errorBox" class="alert-box"></div>
+
+    <!-- 1. PIN Lock Screen -->
+    <div id="loginScreen" class="login-card">
+      <div style="font-size: 42px;">🔑</div>
+      <h2 style="font-size: 18px; margin-top: 10px;">Manager Login</h2>
+      <p style="font-size: 12px; color: var(--muted); margin-top: 4px;">Enter your 4-digit PIN assigned by Owner</p>
+      
+      <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••" inputmode="numeric">
+      <button class="btn-submit" onclick="verifyPin()">Unlock Portal</button>
+    </div>
+
+    <!-- 2. Portal Dashboard -->
+    <div id="dashboardScreen" style="display: none;">
+      <!-- Tab Bar: Staff Attendance vs Cashbook -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabStaffBtn" onclick="switchTab('staff')">👥 Staff Attendance</button>
+        <button class="tab-btn" id="tabCashBtn" onclick="switchTab('cash')">💵 Cashbook (Galla)</button>
+      </div>
+
+      <!-- Date Bar -->
+      <div class="date-bar">
+        <button class="date-nav-btn" onclick="changeDate(-1)">◀ Prev</button>
+        <div style="font-weight: 700; font-size: 14px;" id="currentDateDisplay">-</div>
+        <button class="date-nav-btn" onclick="changeDate(1)">Next ▶</button>
+      </div>
+
+      <!-- View A: Staff List -->
+      <div id="staffView">
+        <div style="font-size: 12px; font-weight: 700; color: var(--muted); margin: 6px 4px 8px 4px; text-transform: uppercase;">
+          Workers Attendance, Overtime & Advances
+        </div>
+        <div id="workersList"></div>
+      </div>
+
+      <!-- View B: Cashbook -->
+      <div id="cashView" style="display: none;">
+        <div class="cash-card">
+          <h3 style="font-size: 15px; margin-bottom: 12px;">Add Daily Cash Transaction</h3>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="btn-submit" style="background: var(--green); max-width: none;" onclick="addCashEntry('IN')">+ Cash IN (Receipt)</button>
+            <button class="btn-submit" style="background: var(--red); max-width: none;" onclick="addCashEntry('OUT')">- Cash OUT (Payment)</button>
+          </div>
+        </div>
+        <div id="cashList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://mwpannzrpftuampoieak.supabase.co";
+    const SUPABASE_ANON = "sb_publishable_Obg1n-jKMS2HSL1da9Ldpw_woy3Ga5C";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const ownerId = urlParams.get('owner');
+    const mgrId = urlParams.get('mgr');
+
+    let allWorkers = [];
+    let appSettings = {};
+    let activeTab = 'staff';
+    let currentDate = new Date();
+
+    function getDateStr(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    let currentDateStr = getDateStr(currentDate);
+
+    function updateDateDisplay() {
+      const opts = { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' };
+      document.getElementById('currentDateDisplay').innerText = currentDate.toLocaleDateString('en-IN', opts);
+    }
+
+    function changeDate(delta) {
+      currentDate.setDate(currentDate.getDate() + delta);
+      currentDateStr = getDateStr(currentDate);
+      updateDateDisplay();
+      if (activeTab === 'staff') renderWorkers();
+      else loadCashbook();
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('tabStaffBtn').className = tab === 'staff' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tabCashBtn').className = tab === 'cash' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('staffView').style.display = tab === 'staff' ? 'block' : 'none';
+      document.getElementById('cashView').style.display = tab === 'cash' ? 'block' : 'none';
+
+      if (tab === 'cash') loadCashbook();
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorBox');
+      el.innerHTML = msg;
+      el.style.display = 'block';
+    }
+
+    async function verifyPin() {
+      const pin = document.getElementById('pinInput').value.trim();
+      if (pin.length !== 4) return showError("Please enter a valid 4-digit PIN.");
+      if (!ownerId) return showError("Owner ID missing in URL. Please open the full link from WhatsApp.");
+
+      document.getElementById('errorBox').style.display = 'none';
+
+      try {
+        let query = supabase.from('managers').select('*').eq('owner_id', ownerId).eq('pin', pin);
+        if (mgrId) query = query.eq('id', mgrId);
+
+        const { data, error } = await query.maybeSingle();
+        if (error || !data) return showError("❌ Invalid PIN! Please verify with Owner.");
+
+        document.getElementById('headerStatus').innerText = data.manager_name;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboardScreen').style.display = 'block';
+
+        updateDateDisplay();
+        await loadSettings();
+        await loadWorkers();
+      } catch (err) {
+        showError(`Login Error: ${err.message || err}`);
+      }
+    }
+
+    async function loadSettings() {
+      const { data } = await supabase.from('business_settings').select('*').eq('owner_id', ownerId).maybeSingle();
+      if (data) appSettings = data;
+    }
+
+    async function loadWorkers() {
+      try {
+        const { data, error } = await supabase.from('worker_passbooks').select('*').eq('owner_id', ownerId);
+        if (error) return showError(`Failed loading staff: ${error.message}`);
+        allWorkers = data || [];
+        renderWorkers();
+      } catch (e) {
+        showError(`Fetch error: ${e.message}`);
+      }
+    }
+
+    function renderWorkers() {
+      const listEl = document.getElementById('workersList');
+      if (allWorkers.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: grey; padding: 35px;">No staff synced by Owner yet.</div>';
+        return;
+      }
+
+      const cur = appSettings.currency_symbol || '₹';
+      let html = '';
+
+      allWorkers.forEach(w => {
+        const attData = w.attendance_data || {};
+        const dayRecord = attData[currentDateStr] || {};
+        const status = dayRecord.status || '';
+        const otHours = Number(dayRecord.ot_hours) || 0;
+
+        const advData = w.advances_data || {};
+        const advRecord = advData[currentDateStr] || {};
+        const advAmt = Number(advRecord.amount) || 0;
+
+        html += `
+          <div class="worker-card">
+            <div class="w-header">
+              <div>
+                <div class="w-name">${w.worker_name}</div>
+                <div class="w-sub">${w.designation ? w.designation : 'Staff'} • ${cur}${w.salary_rate}/${w.salary_type}</div>
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: ${status ? 'var(--green)' : 'var(--muted)'};">
+                ${status ? `Marked: ${status}` : 'Not Marked'}
+              </div>
+            </div>
+
+            <!-- All 9 Attendance Options Exact Match with App -->
+            <div class="att-grid">
+              <button class="btn-att ${status === 'P' ? 'active-P' : ''}" onclick="saveAtt('${w.worker_id}', 'P')">P</button>
+              <button class="btn-att ${status === 'A' ? 'active-A' : ''}" onclick="saveAtt('${w.worker_id}', 'A')">A</button>
+              <button class="btn-att ${status === '1/2' || status === '½' ? 'active-half' : ''}" onclick="saveAtt('${w.worker_id}', '1/2')">½</button>
+              <button class="btn-att ${status === 'P+1/2' || status === 'P+½' ? 'active-P12' : ''}" onclick="saveAtt('${w.worker_id}', 'P+1/2')">P+½</button>
+              <button class="btn-att ${status === 'P+P' ? 'active-PP' : ''}" onclick="saveAtt('${w.worker_id}', 'P+P')">P+P</button>
+              <button class="btn-att ${otHours > 0 ? 'active-OT' : ''}" onclick="saveOt('${w.worker_id}')">${otHours > 0 ? `${otHours}h OT` : 'OT'}</button>
+              <button class="btn-att ${status === 'PA' ? 'active-PA' : ''}" onclick="saveAtt('${w.worker_id}', 'PA')">PA</button>
+              <button class="btn-att ${status === 'PH' ? 'active-PH' : ''}" onclick="saveAtt('${w.worker_id}', 'PH')">PH</button>
+              <button class="btn-att ${status === 'UH' ? 'active-UH' : ''}" onclick="saveAtt('${w.worker_id}', 'UH')">UH</button>
+            </div>
+
+            <div class="action-row">
+              <button class="btn-action" onclick="saveAdvance('${w.worker_id}')">
+                ${advAmt > 0 ? `Advance: ${cur}${advAmt}` : '+ Advance'}
+              </button>
+              <button class="btn-action" onclick="saveBonus('${w.worker_id}')">+ Bonus</button>
+            </div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+    }
+
+    async function saveAtt(workerId, targetStatus) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      if (!worker.attendance_data) worker.attendance_data = {};
+      const current = worker.attendance_data[currentDateStr]?.status || '';
+
+      if (current === targetStatus) {
+        if (worker.attendance_data[currentDateStr]?.ot_hours > 0) {
+          worker.attendance_data[currentDateStr].status = '';
+        } else {
+          delete worker.attendance_data[currentDateStr];
+        }
+      } else {
+        const existingOtH = worker.attendance_data[currentDateStr]?.ot_hours || 0;
+        const existingOtR = worker.attendance_data[currentDateStr]?.ot_rate || 0;
+        worker.attendance_data[currentDateStr] = {
+          status: targetStatus,
+          ot_hours: existingOtH,
+          ot_rate: existingOtR
+        };
+      }
+
+      renderWorkers();
+      await supabase.from('worker_passbooks').update({
+        attendance_data: worker.attendance_data,
+        updated_at: new Date().toISOString()
+      }).eq('token', worker.token);
+    }
+
+    async function saveOt(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      if (!worker.attendance_data) worker.attendance_data = {};
+      const currentOt = worker.attendance_data[currentDateStr]?.ot_hours || 0;
+
+      const hrsStr = prompt(`Enter Overtime hours for ${worker.worker_name}:`, currentOt > 0 ? currentOt : '1');
+      if (hrsStr === null) return;
+
+      const hrs = parseFloat(hrsStr) || 0;
+      const currentStatus = worker.attendance_data[currentDateStr]?.status || 'P';
+
+      if (hrs > 0) {
+        worker.attendance_data[currentDateStr] = {
+          status: currentStatus,
+          ot_hours: hrs,
+          ot_rate: Number(worker.salary_rate) > 0 ? (Number(worker.salary_rate) / 8) : 0
+        };
+      } else {
+        if (worker.attendance_data[currentDateStr]) {
+          worker.attendance_data[currentDateStr].ot_hours = 0;
+        }
+      }
+
+      renderWorkers();
+      await supabase.from('worker_passbooks').update({
+        attendance_data: worker.attendance_data,
+        updated_at: new Date().toISOString()
+      }).eq('token', worker.token);
+    }
+
+    async function saveAdvance(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      if (!worker.advances_data) worker.advances_data = {};
+      const currentAdv = worker.advances_data[currentDateStr]?.amount || '';
+
+      const amtStr = prompt(`Enter Advance amount for ${worker.worker_name}:`, currentAdv);
+      if (amtStr === null) return;
+
+      const amt = parseFloat(amtStr) || 0;
+      if (amt > 0) {
+        const note = prompt('Payment Reason / Notes (e.g. Petrol, Food):', worker.advances_data[currentDateStr]?.notes || 'Advance') || 'Advance';
+        worker.advances_data[currentDateStr] = {
+          amount: amt,
+          mode: 'Cash',
+          notes: note
+        };
+      } else {
+        delete worker.advances_data[currentDateStr];
+      }
+
+      renderWorkers();
+      await supabase.from('worker_passbooks').update({
+        advances_data: worker.advances_data,
+        updated_at: new Date().toISOString()
+      }).eq('token', worker.token);
+    }
+
+    async function saveBonus(workerId) {
+      const worker = allWorkers.find(w => w.worker_id === workerId);
+      if (!worker) return;
+
+      const amtStr = prompt(`Enter Bonus/Incentive amount for ${worker.worker_name}:`);
+      if (amtStr === null) return;
+
+      const amt = parseFloat(amtStr) || 0;
+      if (amt <= 0) return;
+
+      const note = prompt('Bonus Reason (e.g. Good Work, Festival):', 'Bonus') || 'Bonus';
+      if (!worker.incentives_data) worker.incentives_data = [];
+
+      worker.incentives_data.push({
+        date: currentDateStr,
+        amount: amt,
+        mode: 'Cash',
+        notes: note
+      });
+
+      renderWorkers();
+      await supabase.from('worker_passbooks').update({
+        incentives_data: worker.incentives_data,
+        updated_at: new Date().toISOString()
+      }).eq('token', worker.token);
+
+      alert(`Bonus added successfully!`);
+    }
+
+    /* Cashbook (Galla) Sync Logic */
+    async function loadCashbook() {
+      const cur = appSettings.currency_symbol || '₹';
+      const listEl = document.getElementById('cashList');
+      listEl.innerHTML = '<div style="text-align:center; padding:15px; color:grey;">Loading transactions...</div>';
+
+      const { data, error } = await supabase
+        .from('cash_transactions')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('is_deleted', false)
+        .gte('date', `${currentDateStr}T00:00:00`)
+        .lte('date', `${currentDateStr}T23:59:59`)
+        .order('date', { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; padding:20px; color:grey;">No cash transactions for this date.</div>';
+        return;
+      }
+
+      listEl.innerHTML = data.map(t => `
+        <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; font-size:14px;">${t.type === 'IN' ? '🟢 Cash In (Received)' : '🔴 Cash Out (Payment)'}</div>
+            <div style="font-size:11px; color:var(--muted);">${t.remarks ? t.remarks : 'No notes'} • ${t.payment_mode}</div>
+          </div>
+          <div style="font-size:15px; font-weight:800; color:${t.type === 'IN' ? 'var(--green)' : 'var(--red)'};">
+            ${t.type === 'IN' ? '+' : '-'} ${cur}${t.amount}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function addCashEntry(type) {
+      const amtStr = prompt(`Enter ${type === 'IN' ? 'Cash IN' : 'Cash OUT'} Amount:`);
+      if (!amtStr) return;
+      const amt = parseFloat(amtStr);
+      if (!amt || amt <= 0) return;
+
+      const remarks = prompt('Remarks / Notes (e.g. Client Payment, Tea/Snacks):', '') || '';
+      const txnId = `txn_${Date.now()}`;
+
+      await supabase.from('cash_transactions').insert({
+        id: `${ownerId}_${txnId}`,
+        owner_id: ownerId,
+        amount: amt,
+        type: type,
+        payment_mode: 'Cash',
+        remarks: remarks,
+        date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_deleted: false
+      });
+
+      loadCashbook();
+    }
+  </script>
+</body>
+</html>
