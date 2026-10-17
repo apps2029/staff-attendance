@@ -1,2 +1,0 @@
-# staff-attendance
-labor_register_daily_attendance
