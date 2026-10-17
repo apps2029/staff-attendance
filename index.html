@@ -110,6 +110,14 @@
     // अगर पहले से होम स्क्रीन पर इंस्टॉल है तो कभी न दिखे
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
+   const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    if (isIos && !isStandalone && !localStorage.getItem('pwa_installed')) {
+      document.querySelector('.pwa-sub').innerHTML = 'Tap <b>Share (📤)</b> then <b>Add to Home Screen</b>';
+      document.querySelector('.pwa-btn').style.display = 'none';
+      banner.style.display = 'flex';
+    }
+   
+   
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
